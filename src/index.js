@@ -1,6 +1,17 @@
 
+import React from '../react';
 
-import { element } from './comp/a.js';
+const element = (
+    <section>
+        <h1 title="foo" className='app'>
+            <span>Hello</span>
+            <span>Hello2</span>
+            dsa
+        </h1>
+        <a href="">测试链接</a>
+    </section>
+);
+console.log('element: ', element);
 
 const container = document.querySelector('.root');
 React.render(element, container);

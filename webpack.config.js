@@ -1,5 +1,4 @@
 const { resolve } = require('path');
-const path = require('path');
 // 会帮你创建一个html 直接引用入口文件
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
@@ -19,7 +18,7 @@ module.exports = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: [['@babel/preset-env', { targets: 'defaults' }] ],
+                        presets: [['@babel/preset-env', { targets: 'defaults' }]],
                     },
                     // options: {
                     //     // 开启cache缓存
@@ -38,10 +37,10 @@ module.exports = {
             title: 'React code',
             template: resolve(__dirname, './public', 'index.html')
         }),
-        // new CleanWebpackPlugin({
-        //     cleanOnceBeforeBuildPatterns: ['dist']
-        // })
     ],
+    optimization: {
+        minimize: false,
+    }
     // devServer: {
     //     host: 'localhost',
     //     port: '8080',
