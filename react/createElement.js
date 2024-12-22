@@ -7,7 +7,7 @@
  */
 function createTextElement(node) {
     return {
-        type: 'text',
+        type: 'TEXT_ELEMENT',
         props: {
             nodeValue: node,
             children: []
