@@ -9,6 +9,8 @@ const element = (
             dsa
         </h1>
         <a href="">测试链接</a>
+        <span>Hello</span>
+        <span>Hello2</span>
     </section>
 );
 console.log('element: ', element);

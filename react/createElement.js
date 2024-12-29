@@ -7,7 +7,7 @@
  */
 function createTextElement(node) {
     return {
-        type: 'TEXT_ELEMENT',
+        type: TEXT,
         props: {
             nodeValue: node,
             children: []
@@ -41,3 +41,5 @@ export function createElement(type, props, ... children) {
  * 代表<></>的类型type
  */
 export const Fragment = 'empty';
+
+export const TEXT = 'TEXT_ELEMENT';
