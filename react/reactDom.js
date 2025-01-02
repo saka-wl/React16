@@ -56,17 +56,17 @@ function updateDom(dom, preProps = {}, nextProps = {}) {
     Object.keys(preProps)
         .filter(isProperty)
         .forEach((key) => {
-            if(isEvent(key)) {
+            if (isEvent(key)) {
                 dom.removeEventListener(key.toLocaleLowerCase().substring(2), preProps[key]);
                 return;
             }
             dom[key] = null;
         });
-    
+
     Object.keys(nextProps)
         .filter(isProperty)
         .forEach((key) => {
-            if(isEvent(key)) {
+            if (isEvent(key)) {
                 dom.addEventListener(key.toLocaleLowerCase().substring(2), nextProps[key]);
                 return;
             }
@@ -78,13 +78,31 @@ function updateDom(dom, preProps = {}, nextProps = {}) {
         });
 }
 
+function removeDom(fiber, domParent) {
+    if (fiber.dom) {
+        domParent.removeChild(fiber.dom);
+    }else{
+        removeDom(fiber.child, domParent);
+    }
+}
+
 /**
  * 处理提交的 fiber tree
  * @param {*} fiber 
  */
 function commitWork(fiber) {
-    if (!fiber || !fiber.dom) return;
-    const domParent = fiber.parent?.dom;
+    if (!fiber) return;
+    let domParent = fiber.parent;
+
+    /**
+     * 处理根节点的dom
+     * -> <App></App>
+     * 这种的fiber里面的dom为null
+     */
+    while (domParent && !domParent.dom) {
+        domParent = domParent.parent;
+    }
+    domParent = domParent?.dom;
 
     /**
      * 新增节点操作
@@ -96,7 +114,7 @@ function commitWork(fiber) {
      * 删除操作
      */
     if (fiber.effectTag === 'DELETION' && fiber.dom && domParent) {
-        domParent.removeChild(fiber.dom);
+        removeDom(fiber, domParent);
     }
     /**
      * 更新操作
@@ -202,8 +220,20 @@ function reconcileChildren(wipFiber, elements) {
             prevSibling.sibling = newFiber;
         }
         prevSibling = newFiber;
-        index ++;
+        index++;
     }
+}
+
+function updateHostComponent(fiber) {
+    if (!fiber.dom) {
+        fiber.dom = createDom(fiber);
+    }
+    reconcileChildren(fiber, fiber.props.children);
+}
+
+function updateFunctionComponent(fiber) {
+    const children = [fiber.type(fiber.props)];
+    reconcileChildren(fiber, children);
 }
 
 /**
@@ -212,10 +242,15 @@ function reconcileChildren(wipFiber, elements) {
  * @param {*} fiber 工作单元
  */
 function performUnitOfWork(fiber) {
-    if (!fiber.dom) {
-        fiber.dom = createDom(fiber);
+    // 判断是函数式组件还是普通的组件
+    const isFunctionComponent = fiber.type instanceof Function;
+    if (isFunctionComponent) {
+        updateFunctionComponent(fiber);
+    } else {
+        // 更新普通节点
+        updateHostComponent(fiber);
     }
-    reconcileChildren(fiber, fiber.props.children);
+
     // 深度优先
     if (fiber.child) return fiber.child;
     // 遍历广度
