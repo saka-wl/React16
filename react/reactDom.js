@@ -1,9 +1,9 @@
 
 // 下一个功能单元
 let nextUnitOfWork = null;
-// 根节点
+// 根节点，用于判断是否需要进行commit操作
 let wipRoot = null;
-// 更新前的根节点fiber树
+// 更新前的根节点，一直指向根节点
 let currentRoot = null;
 // 操作中需要删除的节点
 let deletions = null;
@@ -13,7 +13,7 @@ const isProperty = key => key !== 'children';
 /**
  * React16工作原理 Fiber Node
  * 递归将虚拟dom转化为真实dom并且挂载
- * @param {*} element 挂载的虚拟dom
+ * @param {*} element 挂载的虚拟数据结构 element
  * @param {*} container 被挂载的真实dom
  */
 export function render(element, container) {
@@ -162,6 +162,36 @@ function workLoop(deadline) {
 requestIdleCallback(workLoop);
 
 /**
+ * 处理当前工作单元，返回下一个工作单元
+ * 只会处理生成一个 Fiber 节点
+ * 深度优先
+ * @param {*} fiber 工作单元
+ */
+function performUnitOfWork(fiber) {
+    // 判断是函数式组件还是普通的组件
+    const isFunctionComponent = fiber.type instanceof Function;
+    if (isFunctionComponent) {
+        updateFunctionComponent(fiber);
+    } else {
+        // 更新普通节点
+        updateHostComponent(fiber);
+    }
+
+    // 深度优先
+    if (fiber.child) return fiber.child;
+    // 遍历广度
+    let nextFiber = fiber;
+    while (nextFiber) {
+        // 如果有兄弟节点，返回兄弟节点
+        if (nextFiber.sibling) {
+            return nextFiber.sibling;
+        }
+        // 否则返回父节点
+        nextFiber = nextFiber.parent;
+    }
+}
+
+/**
  * 协调 + diff算法
  */
 function reconcileChildren(wipFiber, elements) {
@@ -232,37 +262,60 @@ function updateHostComponent(fiber) {
 }
 
 function updateFunctionComponent(fiber) {
+    wipFiber = fiber;
+    hooksIndex = 0;
+    wipFiber.hooks = [];
+    // 这里会调用useState函数
     const children = [fiber.type(fiber.props)];
     reconcileChildren(fiber, children);
 }
 
+// 每一个组件中的 useState 都会按照下标存储在fiber的 hooks 中
+let hooksIndex = null;
+// 存储在全局变量中，用于通知useState这次调用他的是哪一个 fiber 节点
+let wipFiber = null;
 /**
- * 处理当前工作单元，返回下一个工作单元
- * 深度优先
- * @param {*} fiber 工作单元
+ * 每调用一次setState就会先将这次调用先放到queue的数组中去
+ * 等待下次更新 performUnitOfWork 时一起更新
+ * 调用一次 setState 整个页面就全部刷新了
+ * @param {*} initial 初始值
+ * @returns 
  */
-function performUnitOfWork(fiber) {
-    // 判断是函数式组件还是普通的组件
-    const isFunctionComponent = fiber.type instanceof Function;
-    if (isFunctionComponent) {
-        updateFunctionComponent(fiber);
-    } else {
-        // 更新普通节点
-        updateHostComponent(fiber);
+export function useState(initial) {
+    // 处理老的hooks
+    const oldHook = 
+        wipFiber.alternate && 
+        wipFiber.alternate.hooks && 
+        wipFiber.alternate.hooks[hooksIndex];
+    // 如果初始化就使用initial，之后副作用引起的useState函数就使用之前Fiber的值
+    const hook = {
+        state: oldHook ? oldHook.state : initial,
+        queue: [],
+    };
+    // 处理副作用
+    const actions = oldHook ? oldHook.queue : [];
+    actions.forEach(action => {
+        hook.state = action instanceof Function ? action(hook.state) : action;
+    })
+    /**
+     * 添加下一个功能单元 -> 引发下一次 performUnitOfWork 
+     * -> 导致重新调用这个函数式组件 -> 调用上面收集的副作用队列queue，得到新的state
+     * @param {*} action 处理函数 | 数据
+     */
+    const setState = action => {
+        hook.queue.push(action);
+        // 添加下一个功能单元
+        wipRoot = {
+            dom: currentRoot.dom,
+            props: currentRoot.props,
+            alternate: currentRoot,
+        };
+        nextUnitOfWork = wipRoot;
+        deletions = [];
     }
-
-    // 深度优先
-    if (fiber.child) return fiber.child;
-    // 遍历广度
-    let nextFiber = fiber;
-    while (nextFiber) {
-        // 如果有兄弟节点，返回兄弟节点
-        if (nextFiber.sibling) {
-            return nextFiber.sibling;
-        }
-        // 否则返回父节点
-        nextFiber = nextFiber.parent;
-    }
+    wipFiber.hooks.push(hook);
+    hooksIndex ++;
+    return [hook.state, setState];
 }
 
 

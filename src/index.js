@@ -42,10 +42,40 @@ const container = document.querySelector('.root');
 
 
 
-function App(props) {
-  return <h1>H1,{props.name}!</h1>;
-}
+// function App(props) {
+//   const a = 1;
+//   return <h1>H1,{props.name}!{a}</h1>;
+// }
 
-const element = <App name="foo"></App>;
+// const element = <App name="foo"></App>;
+// console.log('Function Component: ', element);
+// console.log('Function Component type: ', element.type);
+// const element_normal = <h1>H1,saka!</h1>;
+// console.log('Normal Component: ', element_normal);
+
+// React.render(element, container);
+
+
+
+
+function Counter() {
+  const [state, setState] = React.useState(1);
+  const [state2, setState2] = React.useState(2);
+  function onClickHandle(params) {
+    setState((state) => state + 1);
+    setState((state) => state + 2);
+  }
+  return (
+    <div>
+      <h1>Count: {state}</h1>
+      <button onClick={onClickHandle}>+Add</button>
+      <hr />
+      <h1>Count2: {state2}</h1>
+      <button onClick={() => setState2((state) => state + 1)}>+1</button>
+      <button onClick={() => setState2((state) => state + 2)}>+2</button>
+    </div>
+  );
+}
+const element = <Counter />;
 
 React.render(element, container);

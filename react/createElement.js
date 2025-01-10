@@ -30,7 +30,7 @@ export function createElement(type, props, ... children) {
             ... props,
             children: children.map(child => {
                 if(typeof child === 'object') return child;
-                else if(typeof child === 'string') return createTextElement(child);
+                else return createTextElement(child);
             }),
         },
         key: null
